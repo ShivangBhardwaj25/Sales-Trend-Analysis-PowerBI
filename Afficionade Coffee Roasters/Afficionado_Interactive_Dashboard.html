@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Afficionado Coffee Roasters — Demand Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#F6F1E7;
+    --panel:#FFFFFF;
+    --panel-2:#EFE7D8;
+    --line:#E0D5C0;
+    --text:#2A241D;
+    --text-dim:#8C8071;
+    --copper:#B5552E;
+    --copper-dim:#8C3F22;
+    --copper-soft:rgba(181,85,46,0.14);
+    --sage:#5F7A63;
+    --sage-soft:rgba(95,122,99,0.15);
+    --gold:#C79A2E;
+    --rose:#A63D3D;
+    --shadow:0 1px 2px rgba(42,36,29,0.05), 0 6px 16px rgba(42,36,29,0.06);
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  html, body{height:100%; margin:0; overflow:hidden;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+  }
+  .app{
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:14px 20px 16px;
+    gap:10px;
+  }
+
+  header{
+    display:flex; justify-content:space-between; align-items:center;
+    background:linear-gradient(120deg, #2A241D 0%, #40332470 100%), #2A241D;
+    border-radius:var(--radius);
+    padding:12px 20px;
+    color:#fff;
+    flex:0 0 auto;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:.13em;
+    text-transform:uppercase;
+    color:#E3B98A;
+    margin-bottom:3px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:20px;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .badge{
+    background:rgba(255,255,255,0.12);
+    border:1px solid rgba(255,255,255,0.24);
+    border-radius:20px;
+    padding:6px 14px;
+    font-size:12px;
+    color:#F3E9DA;
+    white-space:nowrap;
+  }
+
+  .kpis{
+    flex:0 0 auto;
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+  }
+  .kpi{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:10px 16px;
+    box-shadow:var(--shadow);
+    border-top:3px solid var(--copper);
+    display:flex; flex-direction:column; justify-content:center;
+  }
+  .kpi:nth-child(2){border-top-color:var(--sage);}
+  .kpi:nth-child(3){border-top-color:var(--gold);}
+  .kpi:nth-child(4){border-top-color:var(--rose);}
+  .kpi .label{font-size:10.5px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; font-weight:600;}
+  .kpi .value{font-family:'Fraunces',serif; font-size:23px; font-weight:600; color:var(--copper-dim); line-height:1.25;}
+  .kpi .delta{font-size:11px; color:var(--text-dim);}
+
+  .controls{
+    flex:0 0 auto;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:10px 16px;
+    box-shadow:var(--shadow);
+    display:flex;
+    align-items:center;
+    gap:18px;
+    overflow-x:auto;
+    white-space:nowrap;
+  }
+  .ctrl-group{display:flex; align-items:center; gap:8px; flex:0 0 auto;}
+  .ctrl-title{font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); font-weight:700; flex:0 0 auto;}
+  .chip-row{display:flex; gap:6px; flex:0 0 auto;}
+  .chip{
+    padding:5px 12px;
+    border-radius:16px;
+    border:1px solid var(--line);
+    background:var(--panel-2);
+    color:var(--text-dim);
+    font-size:12px;
+    font-weight:500;
+    cursor:pointer;
+    transition:all .15s ease;
+    user-select:none;
+    flex:0 0 auto;
+  }
+  .chip.active{ background:var(--copper); border-color:var(--copper); color:#fff; font-weight:600; }
+  .chip.active.sage{ background:var(--sage); border-color:var(--sage); }
+  .chip:hover{border-color:var(--copper);}
+
+  .range-wrap{display:flex; align-items:center; gap:8px; flex:0 0 auto;}
+  .range-wrap input[type=range]{width:110px; accent-color:var(--copper);}
+  .range-label{font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--copper-dim); min-width:44px; font-weight:600;}
+
+  .divider{width:1px; height:26px; background:var(--line); flex:0 0 auto;}
+
+  .reset-btn{
+    margin-left:auto;
+    background:var(--panel);
+    border:1px solid var(--line);
+    color:var(--rose);
+    padding:6px 14px;
+    border-radius:16px;
+    cursor:pointer;
+    font-size:12px;
+    font-weight:600;
+    font-family:'Inter',sans-serif;
+    flex:0 0 auto;
+  }
+  .reset-btn:hover{border-color:var(--rose); background:rgba(166,61,61,0.06);}
+
+  .main{
+    flex:1 1 auto;
+    min-height:0;
+    display:grid;
+    grid-template-rows:1.15fr 1fr;
+    gap:12px;
+  }
+  .bottom-row{
+    min-height:0;
+    display:grid;
+    grid-template-columns:1.25fr 1fr 1fr;
+    gap:12px;
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:14px 16px 10px;
+    box-shadow:var(--shadow);
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .panel-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex:0 0 auto;}
+  .panel h2{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:14.5px;
+    margin:0;
+    color:var(--copper-dim);
+  }
+  .panel .hint{font-size:11px; color:var(--text-dim); margin-bottom:6px; flex:0 0 auto;}
+  .chart-holder{flex:1; min-height:0; position:relative;}
+  .chart-holder canvas{position:absolute; inset:0; width:100% !important; height:100% !important;}
+
+  .toggle-row{display:flex; gap:5px; flex:0 0 auto;}
+  .toggle-btn{
+    padding:3px 9px; border-radius:12px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--text-dim); font-size:10.5px; font-weight:600;
+    cursor:pointer;
+  }
+  .toggle-btn.active{background:var(--copper-dim); border-color:var(--copper-dim); color:#fff;}
+
+  .heat-scroll{flex:1; min-height:0; overflow:auto;}
+  .heat-grid{display:grid; grid-template-columns:82px repeat(15,1fr); grid-auto-rows:1fr; gap:2px; height:100%; min-width:460px;}
+  .heat-cell{
+    border-radius:4px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px;
+    color:#fff;
+    font-weight:600;
+  }
+  .heat-head{background:transparent !important; color:var(--text-dim); font-size:9px; font-weight:700;}
+  .heat-row-label{
+    display:flex; align-items:center;
+    font-size:11px; color:var(--text); font-weight:600;
+  }
+
+  .cat-scroll{flex:1; min-height:0; overflow-y:auto; padding-right:4px;}
+  .cat-list{display:flex; flex-direction:column; gap:6px;}
+  .cat-row{cursor:pointer;}
+  .cat-row .bar-bg{background:var(--panel-2); border-radius:6px; height:23px; position:relative; overflow:hidden; border:1.5px solid transparent;}
+  .cat-row.selected .bar-bg{border-color:var(--copper);}
+  .cat-row .bar-fill{
+    position:absolute; left:0; top:0; bottom:0;
+    background:linear-gradient(90deg, #E7C4A9, var(--copper));
+    border-radius:6px;
+  }
+  .cat-row .bar-label{
+    position:absolute; left:9px; top:0; bottom:0; display:flex; align-items:center;
+    font-size:11px; color:var(--text); z-index:2; font-weight:600;
+  }
+  .cat-row .bar-val{
+    position:absolute; right:9px; top:0; bottom:0; display:flex; align-items:center;
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--copper-dim); z-index:2; font-weight:600;
+  }
+
+  ::-webkit-scrollbar{height:6px; width:6px;}
+  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:4px;}
+
+  @media(max-width:1000px){
+    html, body{overflow:auto;}
+    .app{height:auto;}
+    .kpis{grid-template-columns:repeat(2,1fr);}
+    .bottom-row{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div>
+      <div class="eyebrow">Afficionado Coffee Roasters &middot; Time-Based Demand Analysis</div>
+      <h1>When the shop actually gets busy</h1>
+    </div>
+    <div class="badge" id="filterBadge">Showing all data</div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="controls">
+    <div class="ctrl-group">
+      <div class="ctrl-title">Store</div>
+      <div class="chip-row" id="storeChips"></div>
+    </div>
+    <div class="divider"></div>
+    <div class="ctrl-group">
+      <div class="ctrl-title">Daypart</div>
+      <div class="chip-row" id="bucketChips"></div>
+    </div>
+    <div class="divider"></div>
+    <div class="ctrl-group">
+      <div class="ctrl-title">Category</div>
+      <div class="chip-row" id="categoryChips"></div>
+    </div>
+    <div class="divider"></div>
+    <div class="ctrl-group">
+      <div class="ctrl-title">Hours</div>
+      <div class="range-wrap">
+        <span class="range-label" id="hourMinLabel">06:00</span>
+        <input type="range" id="hourMin" min="6" max="20" value="6">
+        <input type="range" id="hourMax" min="6" max="20" value="20">
+        <span class="range-label" id="hourMaxLabel">20:00</span>
+      </div>
+    </div>
+    <button class="reset-btn" id="resetBtn">Reset</button>
+  </div>
+
+  <div class="main">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Hourly demand curve</h2>
+        <div class="toggle-row" id="metricToggle">
+          <div class="toggle-btn" data-metric="revenue">Revenue</div>
+          <div class="toggle-btn" data-metric="qty">Units</div>
+          <div class="toggle-btn" data-metric="txns">Transactions</div>
+        </div>
+      </div>
+      <div class="chart-holder"><canvas id="hourChart"></canvas></div>
+    </div>
+
+    <div class="bottom-row">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Store &times; hour intensity</h2>
+          <div class="toggle-row" id="heatToggle">
+            <div class="toggle-btn" data-metric="txns">Txns</div>
+            <div class="toggle-btn" data-metric="revenue">Rev</div>
+          </div>
+        </div>
+        <div class="heat-scroll"><div class="heat-grid" id="heatGrid"></div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Revenue by category</h2></div>
+        <div class="hint">Click to drill into products</div>
+        <div class="cat-scroll"><div class="cat-list" id="catList"></div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2 id="typeTitle">Product breakdown</h2></div>
+        <div class="hint" id="typeHint">Top products, all categories</div>
+        <div class="chart-holder"><canvas id="typeChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const RAW = [{"store_location":"Astoria","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":1966.5,"qty":548,"txns":546},{"store_location":"Astoria","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":538.0,"qty":27,"txns":27},{"store_location":"Astoria","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":7421.7,"qty":2425,"txns":1631},{"store_location":"Astoria","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":864.25,"qty":44,"txns":44},{"store_location":"Astoria","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":1886.75,"qty":453,"txns":321},{"store_location":"Astoria","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":292.8,"qty":366,"txns":253},{"store_location":"Astoria","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":445.7,"qty":49,"txns":49},{"store_location":"Astoria","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":186.5,"qty":17,"txns":17},{"store_location":"Astoria","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":5426.6,"qty":1936,"txns":1293},{"store_location":"Astoria","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":2644.25,"qty":744,"txns":724},{"store_location":"Astoria","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":466.0,"qty":25,"txns":25},{"store_location":"Astoria","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":8370.7,"qty":2813,"txns":1962},{"store_location":"Astoria","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":1942.7,"qty":99,"txns":99},{"store_location":"Astoria","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":2328.0,"qty":552,"txns":379},{"store_location":"Astoria","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":237.6,"qty":297,"txns":217},{"store_location":"Astoria","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":397.55,"qty":44,"txns":44},{"store_location":"Astoria","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":257.7,"qty":27,"txns":27},{"store_location":"Astoria","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":6161.4,"qty":2155,"txns":1489},{"store_location":"Astoria","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":2874.5,"qty":814,"txns":802},{"store_location":"Astoria","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":1069.0,"qty":58,"txns":58},{"store_location":"Astoria","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":8497.55,"qty":2815,"txns":1914},{"store_location":"Astoria","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":1190.6,"qty":68,"txns":68},{"store_location":"Astoria","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":2296.5,"qty":559,"txns":402},{"store_location":"Astoria","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":336.8,"qty":421,"txns":276},{"store_location":"Astoria","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":595.0,"qty":64,"txns":64},{"store_location":"Astoria","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":53.32,"qty":4,"txns":4},{"store_location":"Astoria","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":6270.3,"qty":2252,"txns":1495},{"store_location":"Astoria","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":2916.75,"qty":827,"txns":819},{"store_location":"Astoria","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":677.0,"qty":38,"txns":38},{"store_location":"Astoria","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":9058.3,"qty":2949,"txns":1966},{"store_location":"Astoria","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":1660.35,"qty":80,"txns":80},{"store_location":"Astoria","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":2594.25,"qty":616,"txns":429},{"store_location":"Astoria","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":372.0,"qty":465,"txns":305},{"store_location":"Astoria","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":366.2,"qty":39,"txns":39},{"store_location":"Astoria","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":152.12,"qty":17,"txns":17},{"store_location":"Astoria","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":6629.15,"qty":2357,"txns":1598},{"store_location":"Astoria","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":1868.25,"qty":515,"txns":488},{"store_location":"Astoria","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":252.0,"qty":12,"txns":12},{"store_location":"Astoria","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":6658.35,"qty":2207,"txns":1474},{"store_location":"Astoria","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":45.0,"qty":2,"txns":2},{"store_location":"Astoria","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":1940.25,"qty":474,"txns":311},{"store_location":"Astoria","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":40.8,"qty":51,"txns":36},{"store_location":"Astoria","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":64.85,"qty":7,"txns":7},{"store_location":"Astoria","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":79.98,"qty":6,"txns":6},{"store_location":"Astoria","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":4548.65,"qty":1618,"txns":1077},{"store_location":"Astoria","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":1668.5,"qty":481,"txns":462},{"store_location":"Astoria","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":150.0,"qty":7,"txns":7},{"store_location":"Astoria","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":6391.5,"qty":2126,"txns":1398},{"store_location":"Astoria","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":288.5,"qty":10,"txns":10},{"store_location":"Astoria","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1878.25,"qty":452,"txns":299},{"store_location":"Astoria","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":40.0,"qty":50,"txns":30},{"store_location":"Astoria","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":123.45,"qty":13,"txns":13},{"store_location":"Astoria","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":5141.0,"qty":1816,"txns":1219},{"store_location":"Astoria","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":1758.0,"qty":504,"txns":485},{"store_location":"Astoria","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":294.0,"qty":14,"txns":14},{"store_location":"Astoria","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":6499.95,"qty":2122,"txns":1405},{"store_location":"Astoria","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":437.15,"qty":17,"txns":17},{"store_location":"Astoria","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1907.75,"qty":456,"txns":308},{"store_location":"Astoria","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":68.8,"qty":86,"txns":51},{"store_location":"Astoria","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":179.65,"qty":18,"txns":18},{"store_location":"Astoria","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Packaged Chocolate","revenue":76.12,"qty":7,"txns":7},{"store_location":"Astoria","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":4726.45,"qty":1670,"txns":1151},{"store_location":"Astoria","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":1732.75,"qty":494,"txns":474},{"store_location":"Astoria","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":204.0,"qty":13,"txns":13},{"store_location":"Astoria","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":5899.3,"qty":1919,"txns":1295},{"store_location":"Astoria","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":495.5,"qty":27,"txns":27},{"store_location":"Astoria","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1832.75,"qty":442,"txns":297},{"store_location":"Astoria","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":68.8,"qty":86,"txns":57},{"store_location":"Astoria","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":198.85,"qty":21,"txns":21},{"store_location":"Astoria","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Packaged Chocolate","revenue":72.52,"qty":7,"txns":7},{"store_location":"Astoria","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":4670.8,"qty":1652,"txns":1128},{"store_location":"Astoria","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":1809.5,"qty":508,"txns":495},{"store_location":"Astoria","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":595.0,"qty":23,"txns":23},{"store_location":"Astoria","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":5966.95,"qty":1940,"txns":1334},{"store_location":"Astoria","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":371.25,"qty":20,"txns":20},{"store_location":"Astoria","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1845.25,"qty":441,"txns":302},{"store_location":"Astoria","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":49.6,"qty":62,"txns":50},{"store_location":"Astoria","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":28.5,"qty":3,"txns":3},{"store_location":"Astoria","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Packaged Chocolate","revenue":30.4,"qty":4,"txns":4},{"store_location":"Astoria","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":4955.5,"qty":1753,"txns":1192},{"store_location":"Astoria","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":2011.5,"qty":552,"txns":532},{"store_location":"Astoria","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":210.0,"qty":12,"txns":12},{"store_location":"Astoria","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":6487.3,"qty":2180,"txns":1508},{"store_location":"Astoria","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":587.3,"qty":24,"txns":24},{"store_location":"Astoria","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1796.25,"qty":435,"txns":301},{"store_location":"Astoria","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":70.4,"qty":88,"txns":60},{"store_location":"Astoria","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":189.6,"qty":21,"txns":21},{"store_location":"Astoria","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Packaged Chocolate","revenue":15.2,"qty":2,"txns":2},{"store_location":"Astoria","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":4743.3,"qty":1668,"txns":1139},{"store_location":"Astoria","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Bakery","revenue":1837.25,"qty":512,"txns":491},{"store_location":"Astoria","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Branded","revenue":310.0,"qty":19,"txns":19},{"store_location":"Astoria","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Coffee","revenue":6005.05,"qty":2004,"txns":1340},{"store_location":"Astoria","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Coffee beans","revenue":468.0,"qty":27,"txns":27},{"store_location":"Astoria","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Drinking Chocolate","revenue":2293.25,"qty":561,"txns":336},{"store_location":"Astoria","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Flavours","revenue":60.0,"qty":75,"txns":50},{"store_location":"Astoria","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Loose Tea","revenue":99.95,"qty":11,"txns":11},{"store_location":"Astoria","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Packaged Chocolate","revenue":60.8,"qty":8,"txns":8},{"store_location":"Astoria","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Tea","revenue":4705.0,"qty":1692,"txns":1120},{"store_location":"Astoria","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Bakery","revenue":1707.5,"qty":486,"txns":481},{"store_location":"Astoria","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Branded","revenue":202.0,"qty":11,"txns":11},{"store_location":"Astoria","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Coffee","revenue":6365.65,"qty":2135,"txns":1434},{"store_location":"Astoria","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Coffee beans","revenue":775.75,"qty":33,"txns":33},{"store_location":"Astoria","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Drinking Chocolate","revenue":1846.0,"qty":451,"txns":301},{"store_location":"Astoria","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Flavours","revenue":65.6,"qty":82,"txns":51},{"store_location":"Astoria","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Loose Tea","revenue":250.35,"qty":26,"txns":26},{"store_location":"Astoria","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Tea","revenue":4738.45,"qty":1670,"txns":1126},{"store_location":"Astoria","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Bakery","revenue":1804.5,"qty":511,"txns":490},{"store_location":"Astoria","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Branded","revenue":490.0,"qty":20,"txns":20},{"store_location":"Astoria","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Coffee","revenue":6122.0,"qty":2020,"txns":1364},{"store_location":"Astoria","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Coffee beans","revenue":1092.85,"qty":51,"txns":51},{"store_location":"Astoria","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Drinking Chocolate","revenue":1890.0,"qty":459,"txns":314},{"store_location":"Astoria","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Flavours","revenue":61.6,"qty":77,"txns":54},{"store_location":"Astoria","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Loose Tea","revenue":254.35,"qty":28,"txns":28},{"store_location":"Astoria","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Packaged Chocolate","revenue":105.05,"qty":11,"txns":11},{"store_location":"Astoria","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Tea","revenue":5123.3,"qty":1809,"txns":1233},{"store_location":"Hell's Kitchen","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":1143.25,"qty":320,"txns":317},{"store_location":"Hell's Kitchen","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":42.0,"qty":3,"txns":3},{"store_location":"Hell's Kitchen","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":2715.0,"qty":899,"txns":604},{"store_location":"Hell's Kitchen","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":384.95,"qty":20,"txns":20},{"store_location":"Hell's Kitchen","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":790.5,"qty":192,"txns":124},{"store_location":"Hell's Kitchen","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":93.6,"qty":117,"txns":78},{"store_location":"Hell's Kitchen","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":129.15,"qty":14,"txns":14},{"store_location":"Hell's Kitchen","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":53.32,"qty":4,"txns":4},{"store_location":"Hell's Kitchen","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":2179.4,"qty":780,"txns":512},{"store_location":"Hell's Kitchen","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":2383.15,"qty":666,"txns":662},{"store_location":"Hell's Kitchen","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":474.0,"qty":28,"txns":28},{"store_location":"Hell's Kitchen","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":5504.7,"qty":1805,"txns":1221},{"store_location":"Hell's Kitchen","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":1171.25,"qty":61,"txns":61},{"store_location":"Hell's Kitchen","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":1732.0,"qty":416,"txns":289},{"store_location":"Hell's Kitchen","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":221.6,"qty":277,"txns":180},{"store_location":"Hell's Kitchen","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":342.45,"qty":37,"txns":37},{"store_location":"Hell's Kitchen","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":166.4,"qty":23,"txns":23},{"store_location":"Hell's Kitchen","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":3965.5,"qty":1421,"txns":954},{"store_location":"Hell's Kitchen","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":4181.2,"qty":1163,"txns":1151},{"store_location":"Hell's Kitchen","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":588.0,"qty":29,"txns":29},{"store_location":"Hell's Kitchen","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":11661.55,"qty":3861,"txns":2602},{"store_location":"Hell's Kitchen","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":1983.3,"qty":93,"txns":93},{"store_location":"Hell's Kitchen","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":3150.75,"qty":755,"txns":493},{"store_location":"Hell's Kitchen","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":460.0,"qty":575,"txns":393},{"store_location":"Hell's Kitchen","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":700.75,"qty":76,"txns":76},{"store_location":"Hell's Kitchen","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":195.84,"qty":21,"txns":21},{"store_location":"Hell's Kitchen","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":8623.05,"qty":3080,"txns":2051},{"store_location":"Hell's Kitchen","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":4173.15,"qty":1174,"txns":1159},{"store_location":"Hell's Kitchen","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":14.0,"qty":1,"txns":1},{"store_location":"Hell's Kitchen","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":11505.8,"qty":3832,"txns":2570},{"store_location":"Hell's Kitchen","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":4392.85,"qty":153,"txns":118},{"store_location":"Hell's Kitchen","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":2690.75,"qty":644,"txns":435},{"store_location":"Hell's Kitchen","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":383.2,"qty":479,"txns":337},{"store_location":"Hell's Kitchen","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":1084.4,"qty":118,"txns":118},{"store_location":"Hell's Kitchen","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":203.99,"qty":26,"txns":26},{"store_location":"Hell's Kitchen","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":8426.15,"qty":2966,"txns":2003},{"store_location":"Hell's Kitchen","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":4053.75,"qty":1133,"txns":1126},{"store_location":"Hell's Kitchen","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":270.0,"qty":16,"txns":16},{"store_location":"Hell's Kitchen","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":12682.2,"qty":4150,"txns":2703},{"store_location":"Hell's Kitchen","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":4113.95,"qty":179,"txns":172},{"store_location":"Hell's Kitchen","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":2649.5,"qty":637,"txns":427},{"store_location":"Hell's Kitchen","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":570.4,"qty":713,"txns":466},{"store_location":"Hell's Kitchen","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":610.8,"qty":66,"txns":66},{"store_location":"Hell's Kitchen","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":334.11,"qty":42,"txns":42},{"store_location":"Hell's Kitchen","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":8321.1,"qty":2937,"txns":1939},{"store_location":"Hell's Kitchen","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":2081.75,"qty":586,"txns":586},{"store_location":"Hell's Kitchen","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":76.0,"qty":6,"txns":6},{"store_location":"Hell's Kitchen","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":6562.5,"qty":2137,"txns":1454},{"store_location":"Hell's Kitchen","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":2545.7,"qty":80,"txns":52},{"store_location":"Hell's Kitchen","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":1763.0,"qty":425,"txns":279},{"store_location":"Hell's Kitchen","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":194.4,"qty":243,"txns":155},{"store_location":"Hell's Kitchen","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":243.7,"qty":26,"txns":26},{"store_location":"Hell's Kitchen","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":142.24,"qty":13,"txns":13},{"store_location":"Hell's Kitchen","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":4317.25,"qty":1537,"txns":1027},{"store_location":"Hell's Kitchen","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":854.3,"qty":242,"txns":241},{"store_location":"Hell's Kitchen","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":36.0,"qty":3,"txns":3},{"store_location":"Hell's Kitchen","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":4671.0,"qty":1558,"txns":1033},{"store_location":"Hell's Kitchen","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":486.25,"qty":22,"txns":22},{"store_location":"Hell's Kitchen","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1456.75,"qty":344,"txns":226},{"store_location":"Hell's Kitchen","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":93.6,"qty":117,"txns":78},{"store_location":"Hell's Kitchen","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":235.8,"qty":26,"txns":26},{"store_location":"Hell's Kitchen","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Packaged Chocolate","revenue":48.4,"qty":7,"txns":7},{"store_location":"Hell's Kitchen","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":3461.0,"qty":1225,"txns":806},{"store_location":"Hell's Kitchen","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":1205.25,"qty":337,"txns":334},{"store_location":"Hell's Kitchen","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":56.0,"qty":4,"txns":4},{"store_location":"Hell's Kitchen","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":5268.2,"qty":1728,"txns":1144},{"store_location":"Hell's Kitchen","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":565.0,"qty":29,"txns":29},{"store_location":"Hell's Kitchen","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1250.5,"qty":306,"txns":206},{"store_location":"Hell's Kitchen","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":106.4,"qty":133,"txns":86},{"store_location":"Hell's Kitchen","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":72.7,"qty":8,"txns":8},{"store_location":"Hell's Kitchen","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Packaged Chocolate","revenue":87.6,"qty":12,"txns":12},{"store_location":"Hell's Kitchen","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":3458.45,"qty":1225,"txns":802},{"store_location":"Hell's Kitchen","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":1151.0,"qty":322,"txns":322},{"store_location":"Hell's Kitchen","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":72.0,"qty":6,"txns":6},{"store_location":"Hell's Kitchen","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":5455.75,"qty":1793,"txns":1195},{"store_location":"Hell's Kitchen","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":425.95,"qty":23,"txns":23},{"store_location":"Hell's Kitchen","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1342.75,"qty":322,"txns":210},{"store_location":"Hell's Kitchen","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":144.0,"qty":180,"txns":120},{"store_location":"Hell's Kitchen","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":107.4,"qty":12,"txns":12},{"store_location":"Hell's Kitchen","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Packaged Chocolate","revenue":73.05,"qty":6,"txns":6},{"store_location":"Hell's Kitchen","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":3525.6,"qty":1278,"txns":860},{"store_location":"Hell's Kitchen","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":1163.5,"qty":333,"txns":324},{"store_location":"Hell's Kitchen","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":42.0,"qty":3,"txns":3},{"store_location":"Hell's Kitchen","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":4744.25,"qty":1611,"txns":1075},{"store_location":"Hell's Kitchen","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":524.0,"qty":25,"txns":25},{"store_location":"Hell's Kitchen","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1202.25,"qty":284,"txns":191},{"store_location":"Hell's Kitchen","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":93.6,"qty":117,"txns":77},{"store_location":"Hell's Kitchen","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":285.4,"qty":31,"txns":31},{"store_location":"Hell's Kitchen","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Packaged Chocolate","revenue":45.6,"qty":6,"txns":6},{"store_location":"Hell's Kitchen","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":3210.65,"qty":1165,"txns":773},{"store_location":"Hell's Kitchen","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":1277.25,"qty":361,"txns":361},{"store_location":"Hell's Kitchen","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":90.0,"qty":7,"txns":7},{"store_location":"Hell's Kitchen","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":4861.15,"qty":1631,"txns":1106},{"store_location":"Hell's Kitchen","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":651.85,"qty":35,"txns":35},{"store_location":"Hell's Kitchen","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1342.0,"qty":332,"txns":235},{"store_location":"Hell's Kitchen","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":117.6,"qty":147,"txns":91},{"store_location":"Hell's Kitchen","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":125.3,"qty":14,"txns":14},{"store_location":"Hell's Kitchen","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Packaged Chocolate","revenue":79.98,"qty":6,"txns":6},{"store_location":"Hell's Kitchen","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":3445.35,"qty":1218,"txns":836},{"store_location":"Hell's Kitchen","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Bakery","revenue":1212.75,"qty":332,"txns":332},{"store_location":"Hell's Kitchen","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Branded","revenue":42.0,"qty":3,"txns":3},{"store_location":"Hell's Kitchen","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Coffee","revenue":5341.95,"qty":1786,"txns":1187},{"store_location":"Hell's Kitchen","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Coffee beans","revenue":453.5,"qty":27,"txns":27},{"store_location":"Hell's Kitchen","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Drinking Chocolate","revenue":1406.25,"qty":339,"txns":223},{"store_location":"Hell's Kitchen","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Flavours","revenue":112.0,"qty":140,"txns":87},{"store_location":"Hell's Kitchen","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Loose Tea","revenue":207.85,"qty":23,"txns":23},{"store_location":"Hell's Kitchen","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Packaged Chocolate","revenue":100.4,"qty":14,"txns":14},{"store_location":"Hell's Kitchen","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Tea","revenue":3912.8,"qty":1377,"txns":922},{"store_location":"Hell's Kitchen","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Bakery","revenue":1066.75,"qty":299,"txns":299},{"store_location":"Hell's Kitchen","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Coffee","revenue":5074.0,"qty":1721,"txns":1132},{"store_location":"Hell's Kitchen","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Coffee beans","revenue":456.55,"qty":23,"txns":23},{"store_location":"Hell's Kitchen","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Drinking Chocolate","revenue":959.5,"qty":235,"txns":150},{"store_location":"Hell's Kitchen","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Flavours","revenue":100.0,"qty":125,"txns":78},{"store_location":"Hell's Kitchen","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Loose Tea","revenue":116.65,"qty":13,"txns":13},{"store_location":"Hell's Kitchen","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Packaged Chocolate","revenue":45.86,"qty":5,"txns":5},{"store_location":"Hell's Kitchen","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Tea","revenue":4043.9,"qty":1433,"txns":908},{"store_location":"Hell's Kitchen","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Bakery","revenue":1150.9,"qty":330,"txns":323},{"store_location":"Hell's Kitchen","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Branded","revenue":84.0,"qty":6,"txns":6},{"store_location":"Hell's Kitchen","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Coffee","revenue":4307.95,"qty":1431,"txns":983},{"store_location":"Hell's Kitchen","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Coffee beans","revenue":210.0,"qty":11,"txns":11},{"store_location":"Hell's Kitchen","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Drinking Chocolate","revenue":1520.25,"qty":355,"txns":227},{"store_location":"Hell's Kitchen","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Flavours","revenue":124.0,"qty":155,"txns":100},{"store_location":"Hell's Kitchen","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Loose Tea","revenue":180.0,"qty":19,"txns":19},{"store_location":"Hell's Kitchen","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Packaged Chocolate","revenue":45.86,"qty":5,"txns":5},{"store_location":"Hell's Kitchen","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Tea","revenue":3143.4,"qty":1103,"txns":728},{"store_location":"Hell's Kitchen","Hour":20,"TimeBucket":"Evening (17-21)","product_category":"Bakery","revenue":289.0,"qty":80,"txns":80},{"store_location":"Hell's Kitchen","Hour":20,"TimeBucket":"Evening (17-21)","product_category":"Branded","revenue":56.0,"qty":4,"txns":4},{"store_location":"Hell's Kitchen","Hour":20,"TimeBucket":"Evening (17-21)","product_category":"Coffee","revenue":866.65,"qty":277,"txns":178},{"store_location":"Hell's Kitchen","Hour":20,"TimeBucket":"Evening (17-21)","product_category":"Coffee beans","revenue":270.0,"qty":9,"txns":9},{"store_location":"Hell's Kitchen","Hour":20,"TimeBucket":"Evening (17-21)","product_category":"Drinking Chocolate","revenue":329.5,"qty":86,"txns":48},{"store_location":"Hell's Kitchen","Hour":20,"TimeBucket":"Evening (17-21)","product_category":"Flavours","revenue":62.4,"qty":78,"txns":44},{"store_location":"Hell's Kitchen","Hour":20,"TimeBucket":"Evening (17-21)","product_category":"Loose Tea","revenue":19.0,"qty":2,"txns":2},{"store_location":"Hell's Kitchen","Hour":20,"TimeBucket":"Evening (17-21)","product_category":"Packaged Chocolate","revenue":76.12,"qty":7,"txns":7},{"store_location":"Hell's Kitchen","Hour":20,"TimeBucket":"Evening (17-21)","product_category":"Tea","revenue":667.7,"qty":235,"txns":156},{"store_location":"Lower Manhattan","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":1534.7,"qty":433,"txns":424},{"store_location":"Lower Manhattan","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":364.0,"qty":22,"txns":22},{"store_location":"Lower Manhattan","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":5096.95,"qty":1689,"txns":1025},{"store_location":"Lower Manhattan","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":489.5,"qty":30,"txns":30},{"store_location":"Lower Manhattan","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":1980.0,"qty":471,"txns":254},{"store_location":"Lower Manhattan","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":336.8,"qty":421,"txns":250},{"store_location":"Lower Manhattan","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":485.3,"qty":50,"txns":50},{"store_location":"Lower Manhattan","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":205.2,"qty":30,"txns":30},{"store_location":"Lower Manhattan","Hour":6,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":3876.65,"qty":1370,"txns":833},{"store_location":"Lower Manhattan","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":3598.79,"qty":1027,"txns":1003},{"store_location":"Lower Manhattan","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":742.0,"qty":37,"txns":37},{"store_location":"Lower Manhattan","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":10653.5,"qty":3566,"txns":2145},{"store_location":"Lower Manhattan","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":1566.7,"qty":74,"txns":74},{"store_location":"Lower Manhattan","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":2888.5,"qty":688,"txns":379},{"store_location":"Lower Manhattan","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":471.2,"qty":589,"txns":365},{"store_location":"Lower Manhattan","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":440.9,"qty":48,"txns":48},{"store_location":"Lower Manhattan","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":327.28,"qty":31,"txns":31},{"store_location":"Lower Manhattan","Hour":7,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":7847.75,"qty":2790,"txns":1710},{"store_location":"Lower Manhattan","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":3592.39,"qty":1031,"txns":1003},{"store_location":"Lower Manhattan","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":1044.0,"qty":54,"txns":48},{"store_location":"Lower Manhattan","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":10547.6,"qty":3471,"txns":2123},{"store_location":"Lower Manhattan","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":1518.75,"qty":69,"txns":69},{"store_location":"Lower Manhattan","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":2687.25,"qty":653,"txns":396},{"store_location":"Lower Manhattan","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":527.2,"qty":659,"txns":410},{"store_location":"Lower Manhattan","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":305.55,"qty":33,"txns":33},{"store_location":"Lower Manhattan","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":152.24,"qty":14,"txns":14},{"store_location":"Lower Manhattan","Hour":8,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":7974.55,"qty":2804,"txns":1683},{"store_location":"Lower Manhattan","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":3476.26,"qty":975,"txns":969},{"store_location":"Lower Manhattan","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":952.0,"qty":66,"txns":51},{"store_location":"Lower Manhattan","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":11011.5,"qty":3574,"txns":2168},{"store_location":"Lower Manhattan","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":1769.8,"qty":85,"txns":80},{"store_location":"Lower Manhattan","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":2800.25,"qty":677,"txns":422},{"store_location":"Lower Manhattan","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":456.0,"qty":570,"txns":372},{"store_location":"Lower Manhattan","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":392.75,"qty":42,"txns":42},{"store_location":"Lower Manhattan","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":126.51,"qty":12,"txns":12},{"store_location":"Lower Manhattan","Hour":9,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":8126.6,"qty":2921,"txns":1798},{"store_location":"Lower Manhattan","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":4012.0,"qty":1129,"txns":1114},{"store_location":"Lower Manhattan","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":798.0,"qty":52,"txns":44},{"store_location":"Lower Manhattan","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":11556.6,"qty":3799,"txns":2337},{"store_location":"Lower Manhattan","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":1834.4,"qty":86,"txns":86},{"store_location":"Lower Manhattan","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":2826.75,"qty":689,"txns":431},{"store_location":"Lower Manhattan","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":590.4,"qty":738,"txns":450},{"store_location":"Lower Manhattan","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":631.45,"qty":68,"txns":68},{"store_location":"Lower Manhattan","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":313.56,"qty":33,"txns":33},{"store_location":"Lower Manhattan","Hour":10,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":8078.3,"qty":2858,"txns":1734},{"store_location":"Lower Manhattan","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Bakery","revenue":1662.06,"qty":476,"txns":464},{"store_location":"Lower Manhattan","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Branded","revenue":204.0,"qty":16,"txns":16},{"store_location":"Lower Manhattan","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Coffee","revenue":4967.3,"qty":1651,"txns":1039},{"store_location":"Lower Manhattan","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Coffee beans","revenue":704.5,"qty":35,"txns":35},{"store_location":"Lower Manhattan","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Drinking Chocolate","revenue":1150.5,"qty":283,"txns":184},{"store_location":"Lower Manhattan","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Flavours","revenue":192.0,"qty":240,"txns":155},{"store_location":"Lower Manhattan","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Loose Tea","revenue":149.4,"qty":16,"txns":16},{"store_location":"Lower Manhattan","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Packaged Chocolate","revenue":26.66,"qty":2,"txns":2},{"store_location":"Lower Manhattan","Hour":11,"TimeBucket":"Morning (6-11)","product_category":"Tea","revenue":3838.05,"qty":1371,"txns":844},{"store_location":"Lower Manhattan","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":1657.64,"qty":471,"txns":452},{"store_location":"Lower Manhattan","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":284.0,"qty":17,"txns":17},{"store_location":"Lower Manhattan","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":5100.4,"qty":1692,"txns":1119},{"store_location":"Lower Manhattan","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":609.4,"qty":26,"txns":26},{"store_location":"Lower Manhattan","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1081.5,"qty":260,"txns":181},{"store_location":"Lower Manhattan","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":200.0,"qty":250,"txns":151},{"store_location":"Lower Manhattan","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":117.25,"qty":13,"txns":13},{"store_location":"Lower Manhattan","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Packaged Chocolate","revenue":53.2,"qty":7,"txns":7},{"store_location":"Lower Manhattan","Hour":12,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":4065.1,"qty":1455,"txns":862},{"store_location":"Lower Manhattan","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":1457.83,"qty":411,"txns":403},{"store_location":"Lower Manhattan","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":616.0,"qty":30,"txns":30},{"store_location":"Lower Manhattan","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":4852.8,"qty":1649,"txns":1065},{"store_location":"Lower Manhattan","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":564.5,"qty":25,"txns":25},{"store_location":"Lower Manhattan","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1256.75,"qty":308,"txns":215},{"store_location":"Lower Manhattan","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":164.0,"qty":205,"txns":140},{"store_location":"Lower Manhattan","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":206.2,"qty":22,"txns":22},{"store_location":"Lower Manhattan","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Packaged Chocolate","revenue":96.4,"qty":13,"txns":13},{"store_location":"Lower Manhattan","Hour":13,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":3135.0,"qty":1100,"txns":720},{"store_location":"Lower Manhattan","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":1856.71,"qty":529,"txns":511},{"store_location":"Lower Manhattan","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":152.0,"qty":11,"txns":11},{"store_location":"Lower Manhattan","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":5370.3,"qty":1777,"txns":1102},{"store_location":"Lower Manhattan","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":652.5,"qty":29,"txns":29},{"store_location":"Lower Manhattan","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1462.0,"qty":357,"txns":242},{"store_location":"Lower Manhattan","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":144.0,"qty":180,"txns":110},{"store_location":"Lower Manhattan","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":165.05,"qty":17,"txns":17},{"store_location":"Lower Manhattan","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Packaged Chocolate","revenue":93.31,"qty":7,"txns":7},{"store_location":"Lower Manhattan","Hour":14,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":3936.1,"qty":1397,"txns":831},{"store_location":"Lower Manhattan","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":1766.7,"qty":503,"txns":497},{"store_location":"Lower Manhattan","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":364.0,"qty":24,"txns":24},{"store_location":"Lower Manhattan","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":6025.85,"qty":1989,"txns":1228},{"store_location":"Lower Manhattan","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":678.05,"qty":29,"txns":29},{"store_location":"Lower Manhattan","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1408.75,"qty":340,"txns":221},{"store_location":"Lower Manhattan","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":168.8,"qty":211,"txns":142},{"store_location":"Lower Manhattan","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":109.35,"qty":12,"txns":12},{"store_location":"Lower Manhattan","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Packaged Chocolate","revenue":124.4,"qty":17,"txns":17},{"store_location":"Lower Manhattan","Hour":15,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":4124.0,"qty":1469,"txns":881},{"store_location":"Lower Manhattan","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Bakery","revenue":1372.67,"qty":388,"txns":388},{"store_location":"Lower Manhattan","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Branded","revenue":204.0,"qty":16,"txns":16},{"store_location":"Lower Manhattan","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee","revenue":5513.1,"qty":1834,"txns":1136},{"store_location":"Lower Manhattan","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Coffee beans","revenue":543.5,"qty":32,"txns":32},{"store_location":"Lower Manhattan","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Drinking Chocolate","revenue":1256.5,"qty":296,"txns":205},{"store_location":"Lower Manhattan","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Flavours","revenue":206.4,"qty":258,"txns":162},{"store_location":"Lower Manhattan","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Loose Tea","revenue":280.45,"qty":31,"txns":31},{"store_location":"Lower Manhattan","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Packaged Chocolate","revenue":32.0,"qty":5,"txns":5},{"store_location":"Lower Manhattan","Hour":16,"TimeBucket":"Afternoon (12-16)","product_category":"Tea","revenue":3612.8,"qty":1288,"txns":828},{"store_location":"Lower Manhattan","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Bakery","revenue":1395.21,"qty":400,"txns":396},{"store_location":"Lower Manhattan","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Branded","revenue":170.0,"qty":10,"txns":10},{"store_location":"Lower Manhattan","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Coffee","revenue":5180.65,"qty":1676,"txns":1047},{"store_location":"Lower Manhattan","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Coffee beans","revenue":97.25,"qty":6,"txns":6},{"store_location":"Lower Manhattan","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Drinking Chocolate","revenue":1076.25,"qty":260,"txns":176},{"store_location":"Lower Manhattan","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Flavours","revenue":179.2,"qty":224,"txns":141},{"store_location":"Lower Manhattan","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Loose Tea","revenue":189.1,"qty":20,"txns":20},{"store_location":"Lower Manhattan","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Packaged Chocolate","revenue":30.4,"qty":4,"txns":4},{"store_location":"Lower Manhattan","Hour":17,"TimeBucket":"Evening (17-21)","product_category":"Tea","revenue":3187.45,"qty":1150,"txns":725},{"store_location":"Lower Manhattan","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Bakery","revenue":876.69,"qty":249,"txns":248},{"store_location":"Lower Manhattan","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Branded","revenue":266.0,"qty":19,"txns":19},{"store_location":"Lower Manhattan","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Coffee","revenue":2801.55,"qty":914,"txns":600},{"store_location":"Lower Manhattan","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Coffee beans","revenue":77.75,"qty":4,"txns":4},{"store_location":"Lower Manhattan","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Drinking Chocolate","revenue":513.5,"qty":124,"txns":84},{"store_location":"Lower Manhattan","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Flavours","revenue":112.0,"qty":140,"txns":74},{"store_location":"Lower Manhattan","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Loose Tea","revenue":47.5,"qty":5,"txns":5},{"store_location":"Lower Manhattan","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Packaged Chocolate","revenue":38.0,"qty":5,"txns":5},{"store_location":"Lower Manhattan","Hour":18,"TimeBucket":"Evening (17-21)","product_category":"Tea","revenue":1738.7,"qty":618,"txns":388},{"store_location":"Lower Manhattan","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Bakery","revenue":42.42,"qty":11,"txns":11},{"store_location":"Lower Manhattan","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Branded","revenue":48.0,"qty":4,"txns":4},{"store_location":"Lower Manhattan","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Coffee","revenue":200.2,"qty":57,"txns":38},{"store_location":"Lower Manhattan","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Coffee beans","revenue":124.35,"qty":6,"txns":6},{"store_location":"Lower Manhattan","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Drinking Chocolate","revenue":96.5,"qty":26,"txns":14},{"store_location":"Lower Manhattan","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Flavours","revenue":19.2,"qty":24,"txns":8},{"store_location":"Lower Manhattan","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Loose Tea","revenue":38.0,"qty":4,"txns":4},{"store_location":"Lower Manhattan","Hour":19,"TimeBucket":"Evening (17-21)","product_category":"Tea","revenue":168.0,"qty":62,"txns":40},{"store_location":"Lower Manhattan","Hour":20,"TimeBucket":"Evening (17-21)","product_category":"Bakery","revenue":26.87,"qty":7,"txns":7},{"store_location":"Lower Manhattan","Hour":20,"TimeBucket":"Evening (17-21)","product_category":"Coffee","revenue":107.2,"qty":37,"txns":32},{"store_location":"Lower Manhattan","Hour":20,"TimeBucket":"Evening (17-21)","product_category":"Drinking Chocolate","revenue":9.5,"qty":2,"txns":1},{"store_location":"Lower Manhattan","Hour":20,"TimeBucket":"Evening (17-21)","product_category":"Tea","revenue":155.7,"qty":56,"txns":35}];
+const TYPE_RAW = [{"product_category":"Bakery","product_type":"Biscotti","revenue":19793.53,"txns":5711},{"product_category":"Bakery","product_type":"Pastry","revenue":25655.99,"txns":6912},{"product_category":"Bakery","product_type":"Scone","revenue":36866.12,"txns":10173},{"product_category":"Branded","product_type":"Clothing","revenue":6163.0,"txns":221},{"product_category":"Branded","product_type":"Housewares","revenue":7444.0,"txns":526},{"product_category":"Coffee","product_type":"Barista Espresso","revenue":91406.2,"txns":16403},{"product_category":"Coffee","product_type":"Drip coffee","revenue":31984.0,"txns":8477},{"product_category":"Coffee","product_type":"Gourmet brewed coffee","revenue":70034.6,"txns":16912},{"product_category":"Coffee","product_type":"Organic brewed coffee","revenue":37746.5,"txns":8489},{"product_category":"Coffee","product_type":"Premium brewed coffee","revenue":38781.15,"txns":8135},{"product_category":"Coffee beans","product_type":"Espresso Beans","revenue":5560.25,"txns":319},{"product_category":"Coffee beans","product_type":"Gourmet Beans","revenue":6798.0,"txns":366},{"product_category":"Coffee beans","product_type":"Green beans","revenue":1340.0,"txns":134},{"product_category":"Coffee beans","product_type":"House blend Beans","revenue":3294.0,"txns":183},{"product_category":"Coffee beans","product_type":"Organic Beans","revenue":8509.5,"txns":415},{"product_category":"Coffee beans","product_type":"Premium Beans","revenue":14583.5,"txns":336},{"product_category":"Drinking Chocolate","product_type":"Hot chocolate","revenue":72416.0,"txns":11468},{"product_category":"Flavours","product_type":"Regular syrup","revenue":6084.8,"txns":4979},{"product_category":"Flavours","product_type":"Sugar free syrup","revenue":2324.0,"txns":1811},{"product_category":"Loose Tea","product_type":"Black tea","revenue":2711.85,"txns":303},{"product_category":"Loose Tea","product_type":"Chai tea","revenue":4301.25,"txns":443},{"product_category":"Loose Tea","product_type":"Green tea","revenue":1470.75,"txns":159},{"product_category":"Loose Tea","product_type":"Herbal tea","revenue":2729.75,"txns":305},{"product_category":"Packaged Chocolate","product_type":"Drinking Chocolate","revenue":2728.04,"txns":266},{"product_category":"Packaged Chocolate","product_type":"Organic Chocolate","revenue":1679.6,"txns":221},{"product_category":"Tea","product_type":"Brewed Black tea","revenue":47932.0,"txns":11350},{"product_category":"Tea","product_type":"Brewed Chai tea","revenue":77081.95,"txns":17183},{"product_category":"Tea","product_type":"Brewed Green tea","revenue":23852.5,"txns":5671},{"product_category":"Tea","product_type":"Brewed herbal tea","revenue":47539.5,"txns":11245}];
+
+const stores = [...new Set(RAW.map(d=>d.store_location))];
+const buckets = ["Morning (6-11)","Afternoon (12-16)","Evening (17-21)","Late (22-5)"].filter(b=>RAW.some(d=>d.TimeBucket===b));
+const allCategories = [...new Set(RAW.map(d=>d.product_category))].sort((a,b)=>{
+  const sa = RAW.filter(d=>d.product_category===a).reduce((s,d)=>s+d.revenue,0);
+  const sb = RAW.filter(d=>d.product_category===b).reduce((s,d)=>s+d.revenue,0);
+  return sb-sa;
+});
+
+const METRIC_META = {
+  revenue: {label:'Revenue', color:'rgba(181,85,46,0.65)'},
+  qty:     {label:'Units Sold', color:'rgba(199,154,46,0.6)'},
+  txns:    {label:'Transactions', color:'rgba(95,122,99,0.65)'}
+};
+
+let state = {
+  stores: new Set(stores),
+  buckets: new Set(buckets),
+  categories: new Set(allCategories),
+  hourMin: 6,
+  hourMax: 20,
+  focusCategory: null,
+  hourMetric: 'revenue',
+  heatMetric: 'txns'
+};
+
+function fmtMoney(v){ return '$' + v.toLocaleString('en-US', {maximumFractionDigits:0}); }
+function fmtHour(h){ return String(h).padStart(2,'0')+':00'; }
+
+function filtered(){
+  return RAW.filter(d =>
+    state.stores.has(d.store_location) &&
+    state.buckets.has(d.TimeBucket) &&
+    state.categories.has(d.product_category) &&
+    d.Hour >= state.hourMin && d.Hour <= state.hourMax
+  );
+}
+
+function buildChips(container, items, activeSet, onToggle, sage){
+  container.innerHTML = '';
+  items.forEach(item=>{
+    const el = document.createElement('div');
+    el.className = 'chip' + (activeSet.has(item) ? ' active' + (sage?' sage':'') : '');
+    el.textContent = item;
+    el.onclick = ()=>{ onToggle(item); render(); };
+    container.appendChild(el);
+  });
+}
+
+function buildToggle(container, current, onPick){
+  container.querySelectorAll('.toggle-btn').forEach(btn=>{
+    btn.classList.toggle('active', btn.getAttribute('data-metric')===current);
+    btn.onclick = ()=>{ onPick(btn.getAttribute('data-metric')); render(); };
+  });
+}
+
+let hourChart, typeChart;
+
+function renderKPIs(data){
+  const rev = data.reduce((s,d)=>s+d.revenue,0);
+  const txns = data.reduce((s,d)=>s+d.txns,0);
+  const qty = data.reduce((s,d)=>s+d.qty,0);
+  const avgTicket = txns ? rev/txns : 0;
+  const morningRev = data.filter(d=>d.TimeBucket==='Morning (6-11)').reduce((s,d)=>s+d.revenue,0);
+  const morningPct = rev ? (morningRev/rev*100) : 0;
+
+  const kpis = [
+    {label:'Total Revenue', value: fmtMoney(rev), delta: txns.toLocaleString()+' transactions'},
+    {label:'Avg Ticket Size', value: '$'+avgTicket.toFixed(2), delta: qty.toLocaleString()+' items sold'},
+    {label:'Peak Hour', value: peakHour(data), delta: 'highest transaction volume'},
+    {label:'Morning Share', value: morningPct.toFixed(0)+'%', delta: 'of revenue, 6\u201311 AM'}
+  ];
+  document.getElementById('kpis').innerHTML = kpis.map(k=>`
+    <div class="kpi">
+      <div class="label">${k.label}</div>
+      <div class="value">${k.value}</div>
+      <div class="delta">${k.delta}</div>
+    </div>`).join('');
+}
+
+function peakHour(data){
+  const byHour = {};
+  data.forEach(d=>{ byHour[d.Hour] = (byHour[d.Hour]||0) + d.txns; });
+  let best = null, bestVal = -1;
+  Object.entries(byHour).forEach(([h,v])=>{ if(v>bestVal){bestVal=v; best=h;} });
+  return best !== null ? fmtHour(best) : '\u2014';
+}
+
+function renderHourChart(data){
+  const hours = [];
+  for(let h=state.hourMin; h<=state.hourMax; h++) hours.push(h);
+  const primaryByHour = hours.map(h=> data.filter(d=>d.Hour===h).reduce((s,d)=>s+d[state.hourMetric],0));
+  const txnByHour = hours.map(h=> data.filter(d=>d.Hour===h).reduce((s,d)=>s+d.txns,0));
+  const meta = METRIC_META[state.hourMetric];
+
+  const datasets = [
+    { type:'bar', label:meta.label, data: primaryByHour, backgroundColor:meta.color, borderRadius:3, order:2, yAxisID:'y' }
+  ];
+  if(state.hourMetric !== 'txns'){
+    datasets.push({ type:'line', label:'Transactions', data: txnByHour, borderColor:'#2A241D', backgroundColor:'#2A241D', tension:.35, pointRadius:1.5, order:1, yAxisID:'y1' });
+  }
+
+  const ctx = document.getElementById('hourChart');
+  if(hourChart) hourChart.destroy();
+  hourChart = new Chart(ctx, {
+    data: { labels: hours.map(fmtHour), datasets },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{ legend:{ labels:{ color:'#8C8071', font:{size:11} }, position:'bottom' } },
+      scales:{
+        x:{ ticks:{color:'#8C8071', font:{size:10}}, grid:{color:'#E0D5C0'} },
+        y:{ position:'left', ticks:{color:'#8C3F22', font:{size:10}}, grid:{color:'#E0D5C0'} },
+        y1:{ position:'right', ticks:{color:'#5F7A63', font:{size:10}}, grid:{display:false}, display: state.hourMetric!=='txns' }
+      }
+    }
+  });
+}
+
+function heatColor(t, max, metric){
+  const ratio = max ? t/max : 0;
+  const hue = metric==='revenue' ? 22 : 140;
+  const light = 90 - ratio*50;
+  return `hsl(${hue}, 45%, ${light}%)`;
+}
+
+function renderHeatmap(data){
+  const hours = [];
+  for(let h=state.hourMin; h<=state.hourMax; h++) hours.push(h);
+  const grid = document.getElementById('heatGrid');
+  grid.style.gridTemplateColumns = `82px repeat(${hours.length}, 1fr)`;
+  grid.style.gridTemplateRows = `repeat(${stores.filter(s=>state.stores.has(s)).length+1}, 1fr)`;
+  grid.innerHTML = '';
+
+  grid.appendChild(document.createElement('div'));
+  hours.forEach(h=>{
+    const head = document.createElement('div');
+    head.className = 'heat-cell heat-head';
+    head.textContent = fmtHour(h).slice(0,2);
+    grid.appendChild(head);
+  });
+
+  const metric = state.heatMetric;
+  const cellVals = {};
+  let max = 0;
+  stores.forEach(s=>{
+    hours.forEach(h=>{
+      const v = data.filter(d=>d.store_location===s && d.Hour===h).reduce((sum,d)=>sum+d[metric],0);
+      cellVals[s+'_'+h] = v;
+      if(v>max) max=v;
+    });
+  });
+
+  stores.forEach(s=>{
+    if(!state.stores.has(s)) return;
+    const label = document.createElement('div');
+    label.className = 'heat-row-label';
+    label.textContent = s;
+    grid.appendChild(label);
+    hours.forEach(h=>{
+      const v = cellVals[s+'_'+h] || 0;
+      const ratio = max ? v/max : 0;
+      const cell = document.createElement('div');
+      cell.className = 'heat-cell';
+      cell.style.background = heatColor(v, max, metric);
+      cell.style.color = ratio > 0.55 ? '#fff' : '#2A241D';
+      const label2 = metric==='revenue' ? fmtMoney(v) : v;
+      cell.title = `${s}, ${fmtHour(h)}: ${label2}`;
+      cell.textContent = ratio > 0.6 ? (metric==='revenue' ? Math.round(v/1000)+'k' : v) : '';
+      grid.appendChild(cell);
+    });
+  });
+}
+
+function renderCategoryList(data){
+  const byCat = {};
+  allCategories.forEach(c=> byCat[c] = 0);
+  data.forEach(d=>{ byCat[d.product_category] = (byCat[d.product_category]||0) + d.revenue; });
+  const visibleCats = allCategories.filter(c=>state.categories.has(c));
+  const max = Math.max(...visibleCats.map(c=>byCat[c]||0), 1);
+  const el = document.getElementById('catList');
+  el.innerHTML = visibleCats.map(c=>{
+    const v = byCat[c] || 0;
+    const pct = (v/max*100).toFixed(1);
+    const selected = state.focusCategory === c ? 'selected' : '';
+    return `
+    <div class="cat-row ${selected}" data-cat="${c}">
+      <div class="bar-bg">
+        <div class="bar-fill" style="width:${pct}%"></div>
+        <div class="bar-label">${c}</div>
+        <div class="bar-val">${fmtMoney(v)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.cat-row').forEach(row=>{
+    row.onclick = ()=>{
+      const c = row.getAttribute('data-cat');
+      state.focusCategory = state.focusCategory === c ? null : c;
+      render();
+    };
+  });
+}
+
+function renderTypeChart(){
+  let rows;
+  if(state.focusCategory){
+    rows = TYPE_RAW.filter(d=>d.product_category===state.focusCategory);
+  } else {
+    const byType = {};
+    TYPE_RAW.filter(d=>state.categories.has(d.product_category)).forEach(d=>{
+      byType[d.product_type] = (byType[d.product_type]||0) + d.revenue;
+    });
+    rows = Object.entries(byType).map(([product_type,revenue])=>({product_type,revenue}));
+  }
+  rows = rows.slice().sort((a,b)=>b.revenue-a.revenue).slice(0,6);
+  document.getElementById('typeHint').textContent = state.focusCategory
+    ? `Product types within ${state.focusCategory}`
+    : 'Top products, all categories';
+
+  const ctx = document.getElementById('typeChart');
+  if(typeChart) typeChart.destroy();
+  typeChart = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: rows.map(r=>r.product_type),
+      datasets:[{ data: rows.map(r=>r.revenue), backgroundColor:'rgba(95,122,99,0.65)', borderRadius:3 }]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ ticks:{color:'#8C8071', font:{size:9}, callback:v=>'$'+v}, grid:{color:'#E0D5C0'} },
+        y:{ ticks:{color:'#2A241D', font:{size:10}}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function renderBadge(){
+  const tags = [];
+  if(state.stores.size < stores.length) tags.push('store');
+  if(state.buckets.size < buckets.length) tags.push('daypart');
+  if(state.categories.size < allCategories.length) tags.push('category');
+  if(state.hourMin!==6 || state.hourMax!==20) tags.push('hours');
+  if(state.focusCategory) tags.push('drill-down');
+  document.getElementById('filterBadge').textContent = tags.length ? `Filtered: ${tags.join(', ')}` : 'Showing all data';
+}
+
+function render(){
+  const data = filtered();
+  renderKPIs(data);
+  renderHourChart(data);
+  renderHeatmap(data);
+  renderCategoryList(data);
+  renderTypeChart();
+  renderBadge();
+
+  buildChips(document.getElementById('storeChips'), stores, state.stores, (item)=>{
+    if(state.stores.has(item)) state.stores.delete(item); else state.stores.add(item);
+    if(state.stores.size===0) state.stores.add(item);
+  });
+  buildChips(document.getElementById('bucketChips'), buckets, state.buckets, (item)=>{
+    if(state.buckets.has(item)) state.buckets.delete(item); else state.buckets.add(item);
+    if(state.buckets.size===0) state.buckets.add(item);
+  });
+  buildChips(document.getElementById('categoryChips'), allCategories, state.categories, (item)=>{
+    if(state.categories.has(item)) state.categories.delete(item); else state.categories.add(item);
+    if(state.categories.size===0) state.categories.add(item);
+    if(state.focusCategory && !state.categories.has(state.focusCategory)) state.focusCategory = null;
+  }, true);
+  buildToggle(document.getElementById('metricToggle'), state.hourMetric, (m)=>{ state.hourMetric = m; });
+  buildToggle(document.getElementById('heatToggle'), state.heatMetric, (m)=>{ state.heatMetric = m; });
+}
+
+document.getElementById('hourMin').addEventListener('input', (e)=>{
+  let v = parseInt(e.target.value);
+  if(v > state.hourMax) v = state.hourMax;
+  state.hourMin = v;
+  document.getElementById('hourMinLabel').textContent = fmtHour(v);
+  render();
+});
+document.getElementById('hourMax').addEventListener('input', (e)=>{
+  let v = parseInt(e.target.value);
+  if(v < state.hourMin) v = state.hourMin;
+  state.hourMax = v;
+  document.getElementById('hourMaxLabel').textContent = fmtHour(v);
+  render();
+});
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  state = { stores:new Set(stores), buckets:new Set(buckets), categories:new Set(allCategories),
+            hourMin:6, hourMax:20, focusCategory:null, hourMetric:'revenue', heatMetric:'txns' };
+  document.getElementById('hourMin').value = 6;
+  document.getElementById('hourMax').value = 20;
+  document.getElementById('hourMinLabel').textContent = '06:00';
+  document.getElementById('hourMaxLabel').textContent = '20:00';
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
